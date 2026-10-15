@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import StatCards from '../components/StatCards';
@@ -11,7 +11,7 @@ import UpcomingSessions from '../components/UpcomingSessions';
 import NewTaskModal from '../components/NewTaskModal';
 import NewSessionModal from '../components/NewSessionModal';
 import SettingsView from '../components/SettingsView';
-import { Task, StudySession, ActivityDay } from '../types/focus';
+import { Task, StudySession, ActivityDay, Priority } from '../types/focus';
 
 // Initial hackathon demo dataset
 const INITIAL_TASKS: Task[] = [
@@ -109,6 +109,53 @@ const INITIAL_ACTIVITY: ActivityDay[] = [
   { day: 'Sunday', shortDay: 'Sun', hours: 2.5, targetHours: 4.0, sessionsCount: 2 },
 ];
 
+const TASK_STORAGE_KEY = 'focusforge:tasks';
+const SESSION_STORAGE_KEY = 'focusforge:sessions';
+
+function isPriority(value: unknown): value is Priority {
+  return value === 'high' || value === 'medium' || value === 'low';
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isTask(value: unknown): value is Task {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === 'string' &&
+    candidate.id.trim() !== '' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.subject === 'string' &&
+    typeof candidate.subjectColor === 'string' &&
+    isPriority(candidate.priority) &&
+    typeof candidate.completed === 'boolean' &&
+    typeof candidate.dueTime === 'string' &&
+    isFiniteNumber(candidate.estimatedPomodoros)
+  );
+}
+
+function isStudySession(value: unknown): value is StudySession {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== 'string' ||
+    candidate.id.trim() === '' ||
+    typeof candidate.title !== 'string' ||
+    typeof candidate.subject !== 'string' ||
+    typeof candidate.time !== 'string' ||
+    !isFiniteNumber(candidate.durationMinutes) ||
+    (candidate.type !== 'Solo' && candidate.type !== 'Group' && candidate.type !== 'Exam Prep' && candidate.type !== 'Lab') ||
+    typeof candidate.completed !== 'boolean'
+  ) {
+    return false;
+  }
+
+  if (candidate.notes !== undefined && typeof candidate.notes !== 'string') return false;
+  return true;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -119,10 +166,82 @@ export default function Home() {
   const [targetStudyHours, setTargetStudyHours] = useState<number>(4);
   const [streakDays, setStreakDays] = useState<number>(7);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>('task-1');
+  const [hasHydrated, setHasHydrated] = useState<boolean>(false);
 
   // Modals state
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState<boolean>(false);
   const [isNewSessionModalOpen, setIsNewSessionModalOpen] = useState<boolean>(false);
+
+  // Hydrate persisted tasks and sessions after mount without causing hydration mismatches.
+  useEffect(() => {
+    try {
+      const storedTasks = window.localStorage.getItem(TASK_STORAGE_KEY);
+      if (storedTasks !== null) {
+        const parsed: unknown = JSON.parse(storedTasks);
+        if (Array.isArray(parsed)) {
+          const validTasks = parsed.filter(isTask);
+          if (parsed.length === 0 || validTasks.length > 0) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setTasks(validTasks);
+          } else {
+            window.localStorage.removeItem(TASK_STORAGE_KEY);
+          }
+        } else {
+          window.localStorage.removeItem(TASK_STORAGE_KEY);
+        }
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(TASK_STORAGE_KEY);
+      } catch {
+        // Ignore storage access errors.
+      }
+    }
+
+    try {
+      const storedSessions = window.localStorage.getItem(SESSION_STORAGE_KEY);
+      if (storedSessions !== null) {
+        const parsed: unknown = JSON.parse(storedSessions);
+        if (Array.isArray(parsed)) {
+          const validSessions = parsed.filter(isStudySession);
+          if (parsed.length === 0 || validSessions.length > 0) {
+            setSessions(validSessions);
+          } else {
+            window.localStorage.removeItem(SESSION_STORAGE_KEY);
+          }
+        } else {
+          window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      } catch {
+        // Ignore storage access errors.
+      }
+    }
+
+    setHasHydrated(true);
+  }, []);
+
+  // Persist only after the initial client-side load has completed.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      window.localStorage.setItem(TASK_STORAGE_KEY, JSON.stringify(tasks));
+    } catch {
+      // Ignore storage errors so the app remains usable.
+    }
+  }, [tasks, hasHydrated]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+    } catch {
+      // Ignore storage errors so the app remains usable.
+    }
+  }, [sessions, hasHydrated]);
 
   // Task Handlers
   const handleToggleTask = (taskId: string) => {

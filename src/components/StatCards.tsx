@@ -39,9 +39,9 @@ export default function StatCards({
       subtext: `${taskPercentage}% completed today`,
       progress: taskPercentage,
       icon: CheckCircleIcon,
-      accentColor: '#8B5CF6',
-      badgeColor: 'bg-[#8B5CF6]/15 text-[#A78BFA] border-[#8B5CF6]/30',
-      barGradient: 'from-[#8B5CF6] to-[#7C3AED]',
+      accentColor: '#DC2626',
+      badgeColor: 'bg-[#DC2626]/15 text-[#F87171] border-[#DC2626]/30',
+      barGradient: 'from-[#DC2626] to-[#991B1B]',
     },
     {
       id: 'time',
@@ -50,9 +50,9 @@ export default function StatCards({
       subtext: `Target: ${Math.floor(targetDailyMinutes / 60)}h ${targetDailyMinutes % 60}m`,
       progress: Math.min(100, Math.round(timeProgressRatio * 100)),
       icon: ClockIcon,
-      accentColor: '#8B5CF6',
-      badgeColor: 'bg-[#8B5CF6]/15 text-[#A78BFA] border-[#8B5CF6]/30',
-      barGradient: 'from-[#8B5CF6] to-[#A78BFA]',
+      accentColor: '#DC2626',
+      badgeColor: 'bg-[#DC2626]/15 text-[#F87171] border-[#DC2626]/30',
+      barGradient: 'from-[#DC2626] to-[#F87171]',
     },
     {
       id: 'streak',
@@ -61,9 +61,9 @@ export default function StatCards({
       subtext: 'Record: 12 days • On fire!',
       progress: (streakDays / 12) * 100,
       icon: FlameIcon,
-      accentColor: '#FF9F43',
-      badgeColor: 'bg-[#FF9F43]/15 text-[#FF9F43] border-[#FF9F43]/30',
-      barGradient: 'from-[#FF9F43] to-[#FB923C]',
+      accentColor: '#F59E0B',
+      badgeColor: 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30',
+      barGradient: 'from-[#F59E0B] to-[#FBBF24]',
     },
     {
       id: 'progress',
@@ -72,9 +72,9 @@ export default function StatCards({
       subtext: overallProgressPercentage >= 100 ? 'Daily goal reached! 🎯' : 'On track to hit daily target',
       progress: Math.min(100, overallProgressPercentage),
       icon: TargetIcon,
-      accentColor: '#FF9F43',
-      badgeColor: 'bg-[#FF9F43]/15 text-[#FF9F43] border-[#FF9F43]/30',
-      barGradient: 'from-[#8B5CF6] via-[#A78BFA] to-[#FF9F43]',
+      accentColor: '#F59E0B',
+      badgeColor: 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30',
+      barGradient: 'from-[#DC2626] via-[#F87171] to-[#F59E0B]',
     },
   ];
 
@@ -85,7 +85,7 @@ export default function StatCards({
         return (
           <div
             key={stat.id}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#262632] bg-[#191920] p-5 shadow-sm transition-all hover:border-[#8B5CF6]/40 hover:shadow-md hover:shadow-black/40"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#262632] bg-[#191920] p-5 shadow-sm transition-all hover:border-[#DC2626]/40 hover:shadow-md hover:shadow-black/40"
           >
             {/* Top row: Label & Icon */}
             <div className="flex items-center justify-between">

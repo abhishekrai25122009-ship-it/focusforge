@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, {
+  forwardRef,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useImperativeHandle,
+} from 'react';
 import { PlayIcon, PauseIcon, RotateCcwIcon, CoffeeIcon, SparklesIcon, TimerIcon } from './Icons';
 import { Task, TimerMode } from '../types/focus';
 
@@ -8,7 +15,15 @@ interface FocusTimerProps {
   tasks: Task[];
   selectedTaskId: string | null;
   onSelectTask: (taskId: string) => void;
-  onSessionComplete: (minutes: number) => void;
+  sessionsCompletedToday?: number;
+  onSessionComplete: (
+    durationMinutes: number,
+    mode: TimerMode,
+    taskId: string | null,
+    taskTitle: string | null,
+    startedAt: number,
+    completedAt: number
+  ) => void;
 }
 
 const MODE_DURATIONS: Record<TimerMode, number> = {
@@ -17,19 +32,28 @@ const MODE_DURATIONS: Record<TimerMode, number> = {
   longBreak: 15 * 60, // 15 minutes
 };
 
-export default function FocusTimer({
-  tasks,
-  selectedTaskId,
-  onSelectTask,
-  onSessionComplete,
-}: FocusTimerProps) {
+const FocusTimer = forwardRef<{ toggleTimer: () => void }, FocusTimerProps>(
+  ({
+    tasks,
+    selectedTaskId,
+    onSelectTask,
+    onSessionComplete,
+    sessionsCompletedToday = 0,
+  }, ref) => {
   const [mode, setMode] = useState<TimerMode>('pomodoro');
   const [timeLeft, setTimeLeft] = useState<number>(MODE_DURATIONS.pomodoro);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [sessionsCompletedToday, setSessionsCompletedToday] = useState<number>(3);
+  const [sessionDurationSeconds, setSessionDurationSeconds] = useState<number>(MODE_DURATIONS.pomodoro);
 
   // Interval reference for clean setup & cleanup
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStartedAtRef = useRef<number | null>(null);
+  const completionHandledRef = useRef<boolean>(false);
+
+  // Announcement state for screen reader live region
+  const [announcement, setAnnouncement] = useState<string>('');
+  const prevIsRunningRef = useRef<boolean>(isRunning);
+  const prevModeRef = useRef<TimerMode>(mode);
 
   // Audio tone generation for session finish using Web Audio API (no external file needed)
   const playAlertSound = useCallback(() => {
@@ -64,15 +88,31 @@ export default function FocusTimer({
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            // Timer finished!
-            if (timerRef.current) clearInterval(timerRef.current);
+            // Timer finished. clear interval once and suppress duplicate completions.
+            if (completionHandledRef.current) return 0;
+            completionHandledRef.current = true;
+
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
             setIsRunning(false);
             playAlertSound();
 
-            if (mode === 'pomodoro') {
-              setSessionsCompletedToday((s) => s + 1);
-              onSessionComplete(25);
+            if (mode === 'pomodoro' && sessionStartedAtRef.current !== null && sessionDurationSeconds > 0) {
+              const completedAt = Date.now();
+              onSessionComplete(
+                Math.round(sessionDurationSeconds / 60),
+                mode,
+                selectedTaskId,
+                tasks.find((task) => task.id === selectedTaskId)?.title ?? null,
+                sessionStartedAtRef.current,
+                completedAt
+              );
+              announceSessionComplete();
             }
+
+            sessionStartedAtRef.current = null;
             return 0;
           }
           return prev - 1;
@@ -92,15 +132,43 @@ export default function FocusTimer({
         timerRef.current = null;
       }
     };
-  }, [isRunning, mode, onSessionComplete, playAlertSound]);
+  }, [isRunning, mode, onSessionComplete, playAlertSound, selectedTaskId, sessionDurationSeconds, tasks]);
 
-  // Handle switching modes
+  // Announce timer state changes via live region for screen readers
+  useEffect(() => {
+    const prevIsRunning = prevIsRunningRef.current;
+    const prevMode = prevModeRef.current;
+
+    if (mode !== prevMode) {
+      setAnnouncement(`Switched to ${mode}`);
+    } else if (isRunning && !prevIsRunning) {
+      setAnnouncement(`Timer started, ${mode}`);
+    } else if (!isRunning && prevIsRunning) {
+      setAnnouncement('Timer paused');
+    }
+
+    prevIsRunningRef.current = isRunning;
+    prevModeRef.current = mode;
+  }, [isRunning, mode]);
+
+  // Announce timer reset
+  const announceReset = () => {
+    setAnnouncement('Timer reset');
+  };
+
+  // Announce session completion
+  const announceSessionComplete = () => {
+    setAnnouncement('Session complete');
+  };
   const handleModeChange = (newMode: TimerMode) => {
     setIsRunning(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    sessionStartedAtRef.current = null;
+    completionHandledRef.current = false;
+    setSessionDurationSeconds(MODE_DURATIONS[newMode]);
     setMode(newMode);
     setTimeLeft(MODE_DURATIONS[newMode]);
   };
@@ -108,11 +176,23 @@ export default function FocusTimer({
   // Timer controls
   const handleToggle = () => {
     if (timeLeft === 0) {
-      // If at zero, reset first
+      // If at zero, reset to a new full interval before starting.
       setTimeLeft(MODE_DURATIONS[mode]);
+      setSessionDurationSeconds(MODE_DURATIONS[mode]);
+      completionHandledRef.current = false;
+      sessionStartedAtRef.current = null;
     }
-    setIsRunning((prev) => !prev);
+
+    const willRun = !isRunning;
+    if (willRun && sessionStartedAtRef.current === null) {
+      sessionStartedAtRef.current = Date.now();
+    }
+    setIsRunning(willRun);
   };
+
+  useImperativeHandle(ref, () => ({
+    toggleTimer: handleToggle,
+  }));
 
   const handleReset = () => {
     setIsRunning(false);
@@ -120,10 +200,15 @@ export default function FocusTimer({
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    sessionStartedAtRef.current = null;
+    completionHandledRef.current = false;
+    setSessionDurationSeconds(MODE_DURATIONS[mode]);
     setTimeLeft(MODE_DURATIONS[mode]);
+    announceReset();
   };
 
   const handleAddFiveMinutes = () => {
+    setSessionDurationSeconds((prev) => prev + 300);
     setTimeLeft((prev) => prev + 300);
   };
 
@@ -133,7 +218,7 @@ export default function FocusTimer({
   const timeFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   // SVG circle math
-  const totalDuration = MODE_DURATIONS[mode];
+  const totalDuration = sessionDurationSeconds > 0 ? sessionDurationSeconds : MODE_DURATIONS[mode];
   const progressRatio = totalDuration > 0 ? (totalDuration - timeLeft) / totalDuration : 0;
   const radius = 88;
   const circumference = 2 * Math.PI * radius;
@@ -146,10 +231,14 @@ export default function FocusTimer({
       id="focus-timer-section"
       className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#262632] bg-[#191920] p-6 shadow-sm"
     >
+      {/* Live region for timer announcements */}
+      <div aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
       {/* Top Bar: Title & Mode Selector */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/15 text-[#8B5CF6]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#DC2626]/30 bg-[#DC2626]/15 text-[#DC2626]">
             <TimerIcon size={18} />
           </div>
           <div>
@@ -164,7 +253,7 @@ export default function FocusTimer({
             onClick={() => handleModeChange('pomodoro')}
             className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               mode === 'pomodoro'
-                ? 'bg-[#8B5CF6] text-white shadow-sm'
+                ? 'bg-[#DC2626] text-white shadow-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -174,7 +263,7 @@ export default function FocusTimer({
             onClick={() => handleModeChange('shortBreak')}
             className={`flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
               mode === 'shortBreak'
-                ? 'bg-[#FF9F43] text-black shadow-sm'
+                ? 'bg-[#F59E0B] text-black shadow-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
@@ -212,7 +301,7 @@ export default function FocusTimer({
               cx="100"
               cy="100"
               r={radius}
-              stroke={mode === 'pomodoro' ? '#8B5CF6' : mode === 'shortBreak' ? '#FF9F43' : '#A78BFA'}
+              stroke={mode === 'pomodoro' ? '#DC2626' : mode === 'shortBreak' ? '#F59E0B' : '#F87171'}
               strokeWidth="9"
               strokeLinecap="round"
               fill="transparent"
@@ -231,8 +320,8 @@ export default function FocusTimer({
             </span>
             <span className="mt-1 flex items-center gap-1 text-xs font-medium text-zinc-400">
               {isRunning ? (
-                <span className="flex items-center gap-1.5 text-[#FF9F43]">
-                  <span className="h-2 w-2 rounded-full bg-[#FF9F43] animate-ping" />
+                <span className="flex items-center gap-1.5 text-[#F59E0B]">
+                  <span className="h-2 w-2 rounded-full bg-[#F59E0B] animate-ping" />
                   Focus in progress
                 </span>
               ) : (
@@ -251,7 +340,7 @@ export default function FocusTimer({
             id="timer-task-select"
             value={selectedTaskId || ''}
             onChange={(e) => onSelectTask(e.target.value)}
-            className="w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2 text-xs text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+            className="w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2 text-xs text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
           >
             <option value="">General Deep Focus (No task selected)</option>
             {tasks.map((task) => (
@@ -261,7 +350,7 @@ export default function FocusTimer({
             ))}
           </select>
           {activeTask && (
-            <span className="text-[11px] text-[#A78BFA]">
+            <span className="text-[11px] text-[#F87171]">
               Linked: {activeTask.title} ({activeTask.estimatedPomodoros} pomodoro est.)
             </span>
           )}
@@ -274,7 +363,7 @@ export default function FocusTimer({
           {/* Reset Button */}
           <button
             onClick={handleReset}
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#262632] bg-[#101014] text-zinc-400 hover:border-zinc-700 hover:text-white transition-colors"
+            className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#262632] bg-[#101014] text-zinc-400 hover:border-zinc-700 hover:text-white transition-colors focus-ring"
             title="Reset timer"
             aria-label="Reset timer"
           >
@@ -287,7 +376,7 @@ export default function FocusTimer({
             className={`flex h-12 flex-1 max-w-[200px] items-center justify-center gap-2 rounded-xl font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] ${
               isRunning
                 ? 'bg-amber-600 shadow-amber-600/25 hover:bg-amber-500'
-                : 'bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] shadow-[#8B5CF6]/30 hover:brightness-110'
+                : 'bg-gradient-to-r from-[#DC2626] to-[#991B1B] shadow-[#DC2626]/30 hover:brightness-110'
             }`}
           >
             {isRunning ? (
@@ -306,7 +395,7 @@ export default function FocusTimer({
           {/* Quick +5 mins extension */}
           <button
             onClick={handleAddFiveMinutes}
-            className="flex h-12 items-center justify-center rounded-xl border border-[#262632] bg-[#101014] px-3.5 text-xs font-semibold text-zinc-300 hover:border-[#8B5CF6]/50 hover:text-white transition-colors"
+            className="flex h-12 items-center justify-center rounded-xl border border-[#262632] bg-[#101014] px-3.5 text-xs font-semibold text-zinc-300 hover:border-[#DC2626]/50 hover:text-white transition-colors focus-ring"
             title="Add 5 minutes to current timer"
           >
             +5m
@@ -316,12 +405,16 @@ export default function FocusTimer({
         {/* Session Counter Tag */}
         <div className="flex items-center justify-between border-t border-[#262632] pt-3 text-xs text-zinc-400">
           <div className="flex items-center gap-1.5">
-            <SparklesIcon size={13} className="text-[#FF9F43]" />
+            <SparklesIcon size={13} className="text-[#F59E0B]" />
             <span>Completed sprints today:</span>
           </div>
-          <span className="font-bold text-[#FF9F43]">{sessionsCompletedToday} pomodoros</span>
+          <span className="font-bold text-[#F59E0B]">{sessionsCompletedToday} pomodoros</span>
         </div>
       </div>
     </div>
   );
-}
+});
+
+FocusTimer.displayName = 'FocusTimer';
+
+export default FocusTimer;

@@ -35,13 +35,13 @@ export default function UpcomingSessions({
     switch (type) {
       case 'Exam Prep':
         return (
-          <span className="rounded-md border border-[#FF9F43]/40 bg-[#FF9F43]/15 px-2 py-0.5 text-[10px] font-bold text-[#FF9F43]">
+          <span className="rounded-md border border-[#F59E0B]/40 bg-[#F59E0B]/15 px-2 py-0.5 text-[10px] font-bold text-[#F59E0B]">
             Exam Prep
           </span>
         );
       case 'Group':
         return (
-          <span className="rounded-md border border-[#8B5CF6]/40 bg-[#8B5CF6]/15 px-2 py-0.5 text-[10px] font-bold text-[#A78BFA]">
+          <span className="rounded-md border border-[#DC2626]/40 bg-[#DC2626]/15 px-2 py-0.5 text-[10px] font-bold text-[#F87171]">
             Group
           </span>
         );
@@ -69,7 +69,7 @@ export default function UpcomingSessions({
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[#262632]">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/15 text-[#8B5CF6]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#DC2626]/30 bg-[#DC2626]/15 text-[#DC2626]">
             <CalendarIcon size={18} />
           </div>
           <div>
@@ -80,7 +80,7 @@ export default function UpcomingSessions({
 
         <button
           onClick={onOpenNewSessionModal}
-          className="flex items-center gap-1.5 rounded-xl bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 px-3 py-1.5 text-xs font-bold text-[#A78BFA] hover:bg-[#8B5CF6]/30 transition-colors"
+          className="flex items-center gap-1.5 rounded-xl bg-[#DC2626]/20 border border-[#DC2626]/40 px-3 py-1.5 text-xs font-bold text-[#F87171] hover:bg-[#DC2626]/30 transition-all focus-ring"
         >
           <PlusIcon size={14} />
           <span>Schedule</span>
@@ -108,7 +108,7 @@ export default function UpcomingSessions({
                   className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                     session.completed
                       ? 'border-emerald-500 bg-emerald-500 text-white'
-                      : 'border-zinc-600 hover:border-[#8B5CF6]'
+                      : 'border-zinc-600 hover:border-[#DC2626]'
                   }`}
                   aria-label={session.completed ? 'Mark session incomplete' : 'Mark session complete'}
                 >
@@ -134,7 +134,7 @@ export default function UpcomingSessions({
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
                     <span className="font-medium text-zinc-300">{session.subject}</span>
                     <span>•</span>
-                    <span className="text-[#FF9F43]">{session.time}</span>
+                    <span className="text-[#F59E0B]">{session.time}</span>
                     <span>•</span>
                     <span>{session.durationMinutes} mins</span>
                   </div>
@@ -150,9 +150,9 @@ export default function UpcomingSessions({
                 {/* Arm Reminder Button */}
                 <button
                   onClick={() => toggleReminder(session.id)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all focus-ring ${
                     isReminded
-                      ? 'border-[#FF9F43]/40 bg-[#FF9F43]/15 text-[#FF9F43]'
+                      ? 'border-[#F59E0B]/40 bg-[#F59E0B]/15 text-[#F59E0B]'
                       : 'border-[#262632] bg-[#191920] text-zinc-400 hover:text-white'
                   }`}
                   title={isReminded ? 'Notification armed for this session' : 'Set reminder'}
@@ -165,7 +165,8 @@ export default function UpcomingSessions({
                 {!session.completed && (
                   <button
                     onClick={() => onStartSessionInTimer(session.title)}
-                    className="flex items-center gap-1.5 rounded-lg bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 px-3 py-1.5 text-xs font-semibold text-[#A78BFA] hover:bg-[#8B5CF6]/30 transition-all"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#DC2626]/20 border border-[#DC2626]/40 px-3 py-1.5 text-xs font-semibold text-[#F87171] hover:bg-[#DC2626]/30 transition-all focus-ring"
+                    aria-label={`Launch ${session.title} in focus timer`}
                   >
                     <PlayIcon size={12} />
                     <span>Launch</span>
@@ -175,7 +176,7 @@ export default function UpcomingSessions({
                 {/* Delete button */}
                 <button
                   onClick={() => onDeleteSession(session.id)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors focus-ring"
                   title="Remove session"
                   aria-label="Remove session"
                 >

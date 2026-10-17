@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { XIcon, PlusIcon, CalendarIcon } from './Icons';
 import { StudySession } from '../types/focus';
 
@@ -17,6 +17,68 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
   const [durationMinutes, setDurationMinutes] = useState(45);
   const [type, setType] = useState<StudySession['type']>('Group');
   const [notes, setNotes] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (!modalRef.current) return;
+        const focusableElements = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        ).filter(el => !el.hasAttribute('disabled'));
+
+        if (focusableElements.length === 0) return;
+
+        const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+        if (currentIndex === -1) {
+          focusableElements[0].focus();
+          return;
+        }
+
+        if (e.shiftKey) {
+          const nextIndex = currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1;
+          focusableElements[nextIndex].focus();
+        } else {
+          const nextIndex = currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1;
+          focusableElements[nextIndex].focus();
+        }
+      }
+    };
+
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    titleInputRef.current?.focus();
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previousFocusRef.current) {
+        const el = previousFocusRef.current;
+        setTimeout(() => {
+          if (document.body.contains(el)) {
+            el.focus();
+          }
+        }, 0);
+      }
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -40,6 +102,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
 
   return (
     <div
+      ref={modalRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
     >
@@ -49,7 +112,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
       >
         <div className="flex items-center justify-between pb-4 border-b border-[#262632]">
           <div className="flex items-center gap-2">
-            <CalendarIcon size={18} className="text-[#8B5CF6]" />
+            <CalendarIcon size={18} className="text-[#DC2626]" />
             <h2 className="text-lg font-bold text-white">Schedule Study Session</h2>
           </div>
           <button
@@ -67,12 +130,13 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
               Session Title <span className="text-red-400">*</span>
             </label>
             <input
+              ref={titleInputRef}
               type="text"
               required
               placeholder="e.g. Distributed Systems Paper Review"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-[#8B5CF6] transition-colors"
+              className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-[#DC2626] transition-colors"
               autoFocus
             />
           </div>
@@ -86,7 +150,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
               />
             </div>
 
@@ -97,7 +161,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as StudySession['type'])}
-                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
               >
                 <option value="Solo">Solo Focus</option>
                 <option value="Group">Group Study</option>
@@ -117,7 +181,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 placeholder="e.g. Today, 7:00 PM"
-                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
               />
             </div>
 
@@ -132,7 +196,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
                 step="15"
                 value={durationMinutes}
                 onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 45)}
-                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+                className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
               />
             </div>
           </div>
@@ -146,7 +210,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Bring formula sheet, Discord room #study-a"
-              className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-4 py-2 text-sm text-zinc-200 outline-none focus:border-[#8B5CF6] transition-colors"
+              className="mt-1.5 w-full rounded-xl border border-[#262632] bg-[#101014] px-4 py-2 text-sm text-zinc-200 outline-none focus:border-[#DC2626] transition-colors"
             />
           </div>
 
@@ -160,7 +224,7 @@ export default function NewSessionModal({ isOpen, onClose, onAddSession }: NewSe
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#8B5CF6]/30 hover:brightness-110 transition-all"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#DC2626] to-[#991B1B] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#DC2626]/30 hover:brightness-110 transition-all focus-ring"
             >
               <PlusIcon size={16} />
               <span>Schedule</span>

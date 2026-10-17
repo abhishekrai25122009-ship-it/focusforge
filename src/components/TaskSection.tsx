@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Task, Priority } from '../types/focus';
-import { CheckSquareIcon, PlusIcon, TrashIcon, PlayIcon, ClockIcon, SparklesIcon } from './Icons';
+import { CheckSquareIcon, PlusIcon, TrashIcon, PlayIcon, ClockIcon, CalendarIcon, SparklesIcon } from './Icons';
 
 interface TaskSectionProps {
   tasks: Task[];
@@ -22,11 +22,20 @@ export default function TaskSection({
   selectedTaskId,
 }: TaskSectionProps) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string>('all');
+
+  const subjects = useMemo(() => [...new Set(tasks.map((t) => t.subject))], [tasks]);
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === 'pending') return !task.completed;
-    if (filter === 'completed') return task.completed;
-    return true;
+    const matchesCompletion =
+      filter === 'all' ||
+      (filter === 'pending' && !task.completed) ||
+      (filter === 'completed' && task.completed);
+
+    const matchesSubject =
+      subjectFilter === 'all' || task.subject === subjectFilter;
+
+    return matchesCompletion && matchesSubject;
   });
 
   const completedCount = tasks.filter((t) => t.completed).length;
@@ -35,7 +44,7 @@ export default function TaskSection({
     switch (priority) {
       case 'high':
         return (
-          <span className="rounded-md border border-[#FF9F43]/40 bg-[#FF9F43]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#FF9F43]">
+          <span className="rounded-md border border-[#F59E0B]/40 bg-[#F59E0B]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#F59E0B]">
             High
           </span>
         );
@@ -54,6 +63,62 @@ export default function TaskSection({
     }
   };
 
+// Calculate exam countdown using local calendar dates (not elapsed ms)
+// to avoid timezone and daylight-saving errors.
+function getExamCountdown(
+  examDate: string | null | undefined
+): { days: number; label: string; variant: 'future' | 'today' | 'past' } | null {
+  if (!examDate) return null;
+
+  const [year, month, day] = examDate.split('-').map(Number);
+  const exam = new Date(year, month - 1, day, 12, 0, 0, 0); // local noon
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0); // local noon
+
+  const diffDays = Math.round((exam.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return { days: 0, label: 'Exam today', variant: 'today' };
+  }
+  if (diffDays > 0) {
+    return {
+      days: diffDays,
+      label: `${diffDays} day${diffDays === 1 ? '' : 's'} until exam`,
+      variant: 'future',
+    };
+  }
+  return { days: diffDays, label: 'Exam passed', variant: 'past' };
+}
+
+// Calculate due-date status using local calendar dates (not elapsed ms)
+// to avoid timezone and daylight-saving errors.
+function getDueDateStatus(
+  dueDate: string | undefined,
+  completed: boolean
+): { label: string; variant: 'today' | 'upcoming' | 'overdue' } | null {
+  if (!dueDate || completed) return null;
+
+  const [year, month, day] = dueDate.split('-').map(Number);
+  const due = new Date(year, month - 1, day, 12, 0, 0, 0); // local noon
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0, 0); // local noon
+
+  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return { label: 'Due today', variant: 'today' };
+  }
+  if (diffDays > 0) {
+    return {
+      label: `${diffDays} day${diffDays === 1 ? '' : 's'} until due`,
+      variant: 'upcoming',
+    };
+  }
+  return { label: 'Overdue', variant: 'overdue' };
+}
+
   return (
     <div
       id="tasks-section"
@@ -62,7 +127,7 @@ export default function TaskSection({
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/15 text-[#8B5CF6]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#DC2626]/30 bg-[#DC2626]/15 text-[#DC2626]">
             <CheckSquareIcon size={18} />
           </div>
           <div>
@@ -81,7 +146,7 @@ export default function TaskSection({
           <div className="flex items-center rounded-xl border border-[#262632] bg-[#101014] p-1">
             <button
               onClick={() => setFilter('all')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all focus-ring ${
                 filter === 'all' ? 'bg-[#262632] text-white font-semibold' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -89,7 +154,7 @@ export default function TaskSection({
             </button>
             <button
               onClick={() => setFilter('pending')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all focus-ring ${
                 filter === 'pending'
                   ? 'bg-[#262632] text-white font-semibold'
                   : 'text-zinc-400 hover:text-white'
@@ -99,7 +164,7 @@ export default function TaskSection({
             </button>
             <button
               onClick={() => setFilter('completed')}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all focus-ring ${
                 filter === 'completed'
                   ? 'bg-[#262632] text-white font-semibold'
                   : 'text-zinc-400 hover:text-white'
@@ -111,11 +176,30 @@ export default function TaskSection({
 
           <button
             onClick={onOpenNewTaskModal}
-            className="flex items-center gap-1.5 rounded-xl bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 px-3 py-1.5 text-xs font-bold text-[#A78BFA] hover:bg-[#8B5CF6]/30 transition-colors"
+            className="flex items-center gap-1.5 rounded-xl bg-[#DC2626]/20 border border-[#DC2626]/40 px-3 py-1.5 text-xs font-bold text-[#F87171] hover:bg-[#DC2626]/30 transition-all focus-ring"
           >
             <PlusIcon size={14} />
             <span>Add</span>
           </button>
+        </div>
+
+        {/* Subject Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setSubjectFilter('all')}
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all focus-ring ${subjectFilter === 'all' ? 'bg-[#262632] text-white font-semibold' : 'text-zinc-400 hover:text-white'}`}
+          >
+            All Subjects ({tasks.length})
+          </button>
+          {subjects.map((subject) => (
+            <button
+              key={subject}
+              onClick={() => setSubjectFilter(subject)}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all focus-ring ${subjectFilter === subject ? 'bg-[#262632] text-white font-semibold' : 'text-zinc-400 hover:text-white'}`}
+            >
+              {subject} ({tasks.filter((t) => t.subject === subject).length})
+            </button>
+          ))}
         </div>
       </div>
 
@@ -140,7 +224,7 @@ export default function TaskSection({
                   task.completed
                     ? 'border-[#262632]/60 bg-[#14141a]/60 opacity-60'
                     : isAttachedToTimer
-                    ? 'border-[#8B5CF6]/60 bg-[#1f1e29] shadow-sm'
+                    ? 'border-[#DC2626]/60 bg-[#1f1e29] shadow-sm'
                     : 'border-[#262632] bg-[#101014] hover:border-zinc-700'
                 }`}
               >
@@ -150,10 +234,10 @@ export default function TaskSection({
                   <button
                     type="button"
                     onClick={() => onToggleTask(task.id)}
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all sm:mt-0 ${
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all sm:mt-0 focus-ring ${
                       task.completed
-                        ? 'border-[#8B5CF6] bg-[#8B5CF6] text-white'
-                        : 'border-[#383848] bg-[#191920] hover:border-[#8B5CF6]'
+                        ? 'border-[#DC2626] bg-[#DC2626] text-white'
+                        : 'border-[#383848] bg-[#191920] hover:border-[#DC2626]'
                     }`}
                     aria-label={task.completed ? 'Mark task as incomplete' : 'Mark task as complete'}
                   >
@@ -195,6 +279,48 @@ export default function TaskSection({
                         <ClockIcon size={11} />
                         {task.dueTime}
                       </span>
+
+                      {/* Exam Countdown */}
+                      {(() => {
+                        const countdown = getExamCountdown(task.examDate);
+                        if (!countdown) return null;
+                        const color =
+                          countdown.variant === 'today'
+                            ? '#DC2626'
+                            : countdown.variant === 'future'
+                              ? '#F59E0B'
+                              : '#6B7280';
+                        return (
+                          <span
+                            className="flex items-center gap-1 text-[11px] font-medium"
+                            style={{ color }}
+                            title={countdown.label}
+                          >
+                            <CalendarIcon size={11} />
+                            {countdown.label}
+                          </span>
+                        );
+                      })()}
+
+                      {/* Due Date Status */}
+                      {(() => {
+                        const status = getDueDateStatus(task.dueDate, task.completed);
+                        if (!status) return null;
+                        const color =
+                          status.variant === 'today' || status.variant === 'overdue'
+                            ? '#DC2626'
+                            : '#F59E0B';
+                        return (
+                          <span
+                            className="flex items-center gap-1 text-[11px] font-medium"
+                            style={{ color }}
+                            title={status.label}
+                          >
+                            <CalendarIcon size={11} />
+                            {status.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -205,10 +331,10 @@ export default function TaskSection({
                   {!task.completed && (
                     <button
                       onClick={() => onSelectTaskForTimer(task.id)}
-                      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all ${
+                      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all focus-ring ${
                         isAttachedToTimer
-                          ? 'bg-[#8B5CF6] text-white shadow-sm'
-                          : 'border border-[#262632] bg-[#191920] text-zinc-300 hover:border-[#8B5CF6]/50 hover:text-white'
+                          ? 'bg-[#DC2626] text-white shadow-sm'
+                          : 'border border-[#262632] bg-[#191920] text-zinc-300 hover:border-[#DC2626]/50 hover:text-white'
                       }`}
                       title="Attach task to Focus Timer"
                     >
@@ -225,7 +351,7 @@ export default function TaskSection({
                   {/* Delete Task */}
                   <button
                     onClick={() => onDeleteTask(task.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors focus-ring"
                     title="Delete task"
                     aria-label="Delete task"
                   >

@@ -1,25 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { SettingsIcon, SparklesIcon, FlameIcon } from './Icons';
 
 interface SettingsViewProps {
   targetStudyHours: number;
   onUpdateTargetHours: (hours: number) => void;
   streakDays: number;
-  onResetStreak: () => void;
+  onExportBackup: () => void;
+  onImportBackup: (file: File) => void;
 }
 
 export default function SettingsView({
   targetStudyHours,
   onUpdateTargetHours,
   streakDays,
-  onResetStreak,
+  onExportBackup,
+  onImportBackup,
 }: SettingsViewProps) {
+  const importFileInput = useRef<HTMLInputElement>(null);
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto py-2">
       <div className="flex items-center gap-3 pb-4 border-b border-[#262632]">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/15 text-[#8B5CF6]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#DC2626]/30 bg-[#DC2626]/15 text-[#DC2626]">
           <SettingsIcon size={20} />
         </div>
         <div>
@@ -40,9 +43,9 @@ export default function SettingsView({
             <button
               key={hours}
               onClick={() => onUpdateTargetHours(hours)}
-              className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all ${
+              className={`rounded-xl px-4 py-2.5 text-xs font-bold transition-all focus-ring ${
                 targetStudyHours === hours
-                  ? 'bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] text-white shadow-lg shadow-[#8B5CF6]/25'
+                  ? 'bg-gradient-to-r from-[#DC2626] to-[#991B1B] text-white shadow-lg shadow-[#DC2626]/25'
                   : 'border border-[#262632] bg-[#101014] text-zinc-300 hover:border-zinc-700'
               }`}
             >
@@ -81,28 +84,50 @@ export default function SettingsView({
       <div className="flex items-center justify-between rounded-2xl border border-[#262632] bg-[#191920] p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <FlameIcon size={18} className="text-[#FF9F43]" />
+            <FlameIcon size={18} className="text-[#F59E0B]" />
             <h3 className="text-sm font-bold text-white">Active Streak: {streakDays} Days</h3>
           </div>
-          <p className="mt-1 text-xs text-zinc-400">Streak increments automatically with daily completed sessions.</p>
+          <p className="mt-1 text-xs text-zinc-400">Calculated automatically from completed study days. Your saved focus sessions and tasks are never removed by this dashboard.</p>
         </div>
-
-        <button
-          onClick={onResetStreak}
-          className="rounded-xl border border-[#262632] bg-[#101014] px-4 py-2 text-xs font-semibold text-zinc-300 hover:border-rose-800 hover:text-rose-400 transition-colors"
-        >
-          Reset Streak
-        </button>
       </div>
 
-      {/* Tech Stack Info */}
-      <div className="rounded-2xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/5 p-5">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#A78BFA]">
+      {/* Backup & Restore */}
+      <div className="rounded-2xl border border-[#DC2626]/30 bg-[#DC2626]/5 p-5">
+        <div className="flex items-center gap-2 text-xs font-bold text-[#F87171] mb-3">
           <SparklesIcon size={14} />
-          <span>Hackathon Environment Ready</span>
+          <span>Backup &amp; Restore</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={onExportBackup}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all bg-[#DC2626]/20 border border-[#DC2626]/30 text-[#DC2626] hover:bg-[#DC2626]/30"
+          >
+            <SparklesIcon size={12} />
+            <span>Export Backup</span>
+          </button>
+          <button
+            onClick={() => importFileInput.current?.click()}
+            className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all bg-[#F59E0B]/20 border border-[#F59E0B]/30 text-[#F59E0B] hover:bg-[#F59E0B]/30"
+          >
+            <SparklesIcon size={12} />
+            <span>Import Backup</span>
+          </button>
+          <input
+            ref={importFileInput}
+            type="file"
+            accept=".json"
+            onChange={(e) => {
+              const file = e.target?.files?.[0];
+              if (file) {
+                onImportBackup(file);
+              }
+            }}
+            className="hidden"
+          />
         </div>
         <p className="mt-1 text-xs text-zinc-400">
-          FocusForge is operating in offline-first state mode using Next.js App Router, React 19, and Tailwind CSS.
+          Export or restore your tasks and study sessions. Export downloads a JSON file; import replaces all current data
+          with the backup contents.
         </p>
       </div>
     </div>

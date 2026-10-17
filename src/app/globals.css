@@ -5,8 +5,8 @@
   --foreground: #f4f4f6;
   --card-bg: #191920;
   --card-border: #262632;
-  --violet: #8B5CF6;
-  --orange: #FF9F43;
+  --crimson: #DC2626;
+  --amber: #F59E0B;
 }
 
 @theme inline {
@@ -14,8 +14,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card-bg);
   --color-card-border: var(--card-border);
-  --color-violet-accent: var(--violet);
-  --color-orange-accent: var(--orange);
+  --color-crimson-accent: var(--crimson);
+  --color-amber-accent: var(--amber);
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 }
@@ -52,10 +52,21 @@ body {
 }
 
 /* Subtle focus glow utilities */
-.glow-violet {
-  box-shadow: 0 0 25px -5px rgba(139, 92, 246, 0.25);
+.glow-crimson {
+  box-shadow: 0 0 25px -5px rgba(220, 38, 38, 0.25);
 }
 
-.glow-orange {
-  box-shadow: 0 0 25px -5px rgba(255, 159, 67, 0.25);
+.glow-amber {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+}
+
+/* Keyboard focus indicators */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-crimson-accent);
+  outline-offset: 2px;
+}
+
+.focus-ring-amber:focus-visible {
+  outline: 2px solid var(--color-amber-accent);
+  outline-offset: 2px;
 }

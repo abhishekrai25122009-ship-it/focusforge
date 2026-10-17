@@ -17,6 +17,9 @@ export interface Task {
   completed: boolean;
   dueTime: string;
   estimatedPomodoros: number;
+  dueDate?: string;        // ISO YYYY-MM-DD
+  examDate?: string | null; // ISO YYYY-MM-DD or null
+  recurrence?: 'daily' | 'weekly'; // Recurrence rule; absent = one-off task
 }
 
 export interface StudySession {
@@ -45,4 +48,14 @@ export interface TimerSettings {
   pomodoro: number; // in seconds (e.g. 1500 for 25m)
   shortBreak: number; // 300 for 5m
   longBreak: number; // 900 for 15m
+}
+
+export interface FocusSession {
+  id: string;
+  mode: TimerMode;
+  durationMinutes: number;
+  startedAt: number;
+  completedAt: number;
+  taskId: string | null;
+  taskTitle?: string;
 }

@@ -24,7 +24,7 @@ export default function Header({
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenSidebar}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#262632] bg-[#191920] text-zinc-300 hover:text-white lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#262632] bg-[#191920] text-zinc-300 hover:text-white lg:hidden focus-ring"
           aria-label="Open sidebar menu"
         >
           <MenuIcon size={20} />
@@ -35,7 +35,7 @@ export default function Header({
             <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
               Ready to make today count?
             </h1>
-            <span className="hidden items-center gap-1 rounded-full bg-[#FF9F43]/15 border border-[#FF9F43]/30 px-2 py-0.5 text-xs font-semibold text-[#FF9F43] sm:inline-flex">
+            <span className="hidden items-center gap-1 rounded-full bg-[#F59E0B]/15 border border-[#F59E0B]/30 px-2 py-0.5 text-xs font-semibold text-[#F59E0B] sm:inline-flex">
               <SparklesIcon size={12} />
               Midterms Week
             </span>
@@ -51,19 +51,19 @@ export default function Header({
           onClick={onQuickFocus}
           className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all sm:text-sm ${
             isTimerRunning
-              ? 'border border-[#FF9F43]/40 bg-[#FF9F43]/15 text-[#FF9F43] animate-pulse'
-              : 'border border-[#8B5CF6]/40 bg-[#8B5CF6]/15 text-[#A78BFA] hover:bg-[#8B5CF6]/25'
+              ? 'border border-[#F59E0B]/40 bg-[#F59E0B]/15 text-[#F59E0B] animate-pulse'
+              : 'border border-[#DC2626]/40 bg-[#DC2626]/15 text-[#F87171] hover:bg-[#DC2626]/25'
           }`}
           title="Jump to Focus Timer"
         >
-          <PlayIcon size={14} className={isTimerRunning ? 'text-[#FF9F43]' : 'text-[#8B5CF6]'} />
+          <PlayIcon size={14} className={isTimerRunning ? 'text-[#F59E0B]' : 'text-[#DC2626]'} />
           <span className="hidden sm:inline">{isTimerRunning ? 'Timer Active' : 'Quick Sprint'}</span>
         </button>
 
         {/* Add Task Button */}
         <button
           onClick={onAddTask}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED] px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#8B5CF6]/25 transition-all hover:brightness-110 sm:text-sm"
+          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#DC2626] to-[#991B1B] px-3.5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-[#DC2626]/25 transition-all hover:brightness-110 sm:text-sm focus-ring"
         >
           <PlusIcon size={16} />
           <span>New Task</span>
@@ -76,7 +76,7 @@ export default function Header({
           title="No unread alerts"
         >
           <BellIcon size={18} />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#FF9F43] ring-2 ring-[#191920]" />
+          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#F59E0B] ring-2 ring-[#191920]" />
         </button>
       </div>
     </header>
